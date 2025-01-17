@@ -14,7 +14,6 @@ creation_rules:
       - pgp:
           - *sini
         age: *hosts
-
   - path_regex: secrets/surge/[^/]+\.yaml$
     key_groups:
       - pgp:
