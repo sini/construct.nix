@@ -1,9 +1,8 @@
 { config, lib, ... }:
 {
-  # Install boot keys
-  environment.etc = {
-    "secrets/initrd".source = ./boot-keys;
-  };
+  # sops.secrets."initrd_ssh_key" = {
+  #   sopsFile = "${config.sops.defaultSopsFile}";
+  # };
 
   boot = {
     loader = {
@@ -18,12 +17,17 @@
 
     initrd = {
       availableKernelModules = [ "r8169" ];
+      systemd = {
+        enable = true;
+        users.root.shell = "/bin/systemd-tty-ask-password-agent";
+      };
       network = {
         enable = true;
         ssh = {
           enable = true;
           port = 22;
-          shell = "/bin/cryptsetup-askpass";
+          #shell = "/bin/cryptsetup-askpass";
+          #shell = "/bin/systemd-tty-ask-password-agent";
           authorizedKeys =
             with lib;
             concatLists (
@@ -32,15 +36,13 @@
               ) config.users.users
             );
           hostKeys = [
-            "/etc/ssh/ssh_host_ed25519_key"
-            "/etc/ssh/ssh_host_rsa_key"
+            "/etc/secrets/initrd/ssh_host_ed25519_key"
           ];
         };
       };
-      secrets = {
-        "/etc/ssh/ssh_host_ed25519_key" = lib.mkDefault ./boot-keys/ssh_host_ed25519_key;
-        "/etc/ssh/ssh_host_rsa_key" = lib.mkDefault ./boot-keys/ssh_host_rsa_key;
-      };
+     secrets = {
+       "/etc/secrets/initrd/ssh_host_ed25519_key" = lib.mkForce config.sops.secrets."initrd_ssh_key".path;
+     };
       verbose = false;
     };
 

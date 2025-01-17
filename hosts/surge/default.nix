@@ -1,8 +1,12 @@
-{ pkgs, ... }:
+{ inputs, config, pkgs, ... }:
 {
   imports = [
     ../shared/boot.nix
   ];
+
+  sops.secrets."network/eno1/mac" = {
+    sopsFile = "${inputs.self}/secrets/${config.networking.hostName}/secrets.yaml";
+  };
 
   facter.reportPath = ./facter.json;
 
@@ -16,11 +20,11 @@
     btrfs_profile = "single";
   };
 
-  hardware.networking.enable = false;
-  #networking.eno1.ipv4.addresses = [ "10.10.10.6" ];
-  #networking.enp2s0.ipv4.addresses = [ "10.10.10.5" ];
+  system.security.doas.enable = true;
 
-  # Networking
+  hardware.networking.enable = false;
+
+
   systemd.network = {
     enable = true;
     netdevs = {
@@ -30,8 +34,6 @@
           Name = "bond0";
         };
         bondConfig = {
-          # Mode = "balance-rr";
-          # Mode = "balance-alb";
           Mode = "balance-xor";
           TransmitHashPolicy = "layer3+4";
         };
@@ -40,33 +42,29 @@
     # Configure Bonds to utilize both 2.5Gbps ports
     networks = {
       "30-eno1" = {
-        matchConfig.Name = "eno1";
+        matchConfig.PermanentMACAddress = "84:47:09:40:d5:f5";
         networkConfig.Bond = "bond0";
       };
 
       "30-enp2s0" = {
-        matchConfig.Name = "enp2s0";
+        matchConfig.PermanentMACAddress = "84:47:09:40:d5:f4";
         networkConfig.Bond = "bond0";
       };
 
       "40-bond0" = {
         matchConfig.Name = "bond0";
+        networkConfig = {
+          DHCP = "ipv4";
+          LinkLocalAddressing = "no";
+        };
         linkConfig = {
           RequiredForOnline = "routable";
+          MACAddress = "84:47:09:40:d5:f4";
         };
-        address = [ "10.10.10.5/16" ];
-        gateway = [ "10.10.0.1" ];
-        routes = [
-          { Gateway = "10.10.0.1"; }
-        ];
       };
     };
   };
 
-  networking.nameservers = [
-    "1.1.1.1"
-    "8.8.8.8"
-  ];
   networking.firewall.enable = false;
 
   services.ssh.enable = true;
@@ -81,8 +79,6 @@
     wget
     vim
     git
-    doas
-    doas-sudo-shim
   ];
 
   services = {
